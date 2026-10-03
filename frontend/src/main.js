@@ -48,21 +48,74 @@ const material = new THREE.MeshStandardMaterial({
 const earth = new THREE.Mesh(geometry, material);
 scene.add(earth);
 
+let isDragging = false;
+let previousX = 0;
+let previousY = 0;
+
+// Mouse drag
+canvas.addEventListener("pointerdown", (event) => {
+  isDragging = true;
+  previousX = event.clientX;
+  previousY = event.clientY;
+
+  canvas.setPointerCapture(event.pointerId);
+});
+
+canvas.addEventListener("pointermove", (event) => {
+  if (!isDragging) return;
+
+  const deltaX = event.clientX - previousX;
+  const deltaY = event.clientY - previousY;
+
+  earth.rotation.y += deltaX * 0.005;
+  earth.rotation.x += deltaY * 0.005;
+
+  // Prevent the globe from flipping completely upside down
+  earth.rotation.x = THREE.MathUtils.clamp(
+    earth.rotation.x,
+    -Math.PI / 2,
+    Math.PI / 2
+  );
+
+  previousX = event.clientX;
+  previousY = event.clientY;
+});
+
+canvas.addEventListener("pointerup", (event) => {
+  isDragging = false;
+  canvas.releasePointerCapture(event.pointerId);
+});
+
+canvas.addEventListener("pointercancel", () => {
+  isDragging = false;
+});
+
+// Zoom
+canvas.addEventListener(
+  "wheel",
+  (event) => {
+    event.preventDefault();
+
+    camera.position.z += event.deltaY * 0.002;
+
+    camera.position.z = THREE.MathUtils.clamp(
+      camera.position.z,
+      1.5,
+      6
+    );
+  },
+  { passive: false }
+);
+
 // Animation
 function animate() {
   requestAnimationFrame(animate);
 
-  earth.rotation.y += 0.001;
+  if (!isDragging) {
+    earth.rotation.y += 0.001;
+  }
 
   renderer.render(scene, camera);
 }
 
 animate();
-
-// Resize
-window.addEventListener("resize", () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
